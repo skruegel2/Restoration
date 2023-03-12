@@ -50,7 +50,6 @@ def get_window_pixels(z_data, row_idx, col_idx):
             else:
                 z_row.append(z_data[row_idx+win_row_idx,col_idx+win_col_idx])
                 num_win_elements += 1
-    print("Win elements: ",num_win_elements)
     return z_row
 
 def calculate_Z(img, Y):
@@ -67,5 +66,27 @@ def calculate_Z(img, Y):
                 z_row_idx += 1;
     return Z
 
+def calculate_Rzz(Z):
+    N = Z.shape[0]
+    Rzz = np.matmul(np.transpose(Z),Z)
+    Rzz = 1/N * Rzz
+    return Rzz
+
+def calculate_Rhat_zy(Y, Z):
+    N = Z.shape[0]
+    Rhat_zy = np.matmul(np.transpose(Z),Y)
+    Rhat_zy = 1/N * Rhat_zy
+    return Rhat_zy
+
+def calculate_theta_star(Rzz, Rhat_zy, N):
+    theta_star = np.matmul(np.linalg.inv(Rzz),Rhat_zy)
+    theta_star = 1/N * theta_star
+    return theta_star
+
 Y = calculate_Y(img14g)
 Z = calculate_Z(img14bl,Y)
+Rzz = calculate_Rzz(Z)
+Rhat_zy = calculate_Rhat_zy(Z,Y)
+theta_star = calculate_theta_star(Rzz, Rhat_zy,Y.shape[0])
+print(theta_star)
+print(theta_star.shape)
