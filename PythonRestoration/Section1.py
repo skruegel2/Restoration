@@ -32,24 +32,18 @@ def calculate_Y(img):
 
 def get_window_pixels(z_data, row_idx, col_idx):
     z_row = []
-    num_win_elements = 0
     for win_row_idx in range(-3,4):
         for win_col_idx in range(-3, 4):
             if (win_row_idx + row_idx < 0):
                 z_row.append(0)
-                num_win_elements += 1
             elif (win_row_idx + row_idx >= z_data.shape[0]):
                 z_row.append(0)
-                num_win_elements += 1
             elif (win_col_idx + col_idx < 0):
                 z_row.append(0)
-                num_win_elements += 1
-            elif (win_row_idx + row_idx >= z_data.shape[1]):
+            elif (win_col_idx + col_idx >= z_data.shape[1]):
                 z_row.append(0)
-                num_win_elements += 1
             else:
                 z_row.append(z_data[row_idx+win_row_idx,col_idx+win_col_idx])
-                num_win_elements += 1
     return z_row
 
 def calculate_Z(img, Y):
@@ -83,10 +77,41 @@ def calculate_theta_star(Rzz, Rhat_zy, N):
     theta_star = 1/N * theta_star
     return theta_star
 
+def calculate_theta_star_array(theta_star):
+    theta_star_array = np.zeros((7,7))
+    for row_idx in range(7):
+        for col_idx in range(7):
+            theta_star_array[row_idx,col_idx] = theta_star[col_idx + 7 * row_idx]
+    return theta_star_array
+
+def filter_pixel(X, theta_star_array, row_idx, col_idx):
+    pixel = 0
+    for win_row_idx in range(-3,4):
+        for win_col_idx in range(-3, 4):
+            if ((win_row_idx + row_idx < 0) or
+                (win_row_idx + row_idx >= X.shape[0]) or
+                (win_col_idx + col_idx < 0) or
+                (win_col_idx + col_idx >= X.shape[1])):
+                pixel += 0
+            else:
+                pixel += (theta_star_array[win_row_idx+3,win_col_idx+3]*
+                         X[win_row_idx+row_idx, win_col_idx+col_idx])
+    return pixel
+
+def apply_optimal_filter(theta_star_array, im, filename):
+    X = np.array(im)
+    Y = np.zeros((X.shape))
+    for row_idx in range(X.shape[0]):
+        for col_idx in range(X.shape[1]):
+            Y[row_idx, col_idx] = filter_pixel(X, theta_star_array, row_idx, col_idx)
+    im_filtered = Image.fromarray(Y)
+    im_filtered.save(filename)    
+    im_filtered.show()
+
 Y = calculate_Y(img14g)
 Z = calculate_Z(img14bl,Y)
 Rzz = calculate_Rzz(Z)
 Rhat_zy = calculate_Rhat_zy(Z,Y)
 theta_star = calculate_theta_star(Rzz, Rhat_zy,Y.shape[0])
-print(theta_star)
-print(theta_star.shape)
+theta_star_array = calculate_theta_star_array(theta_star)
+apply_optimal_filter(theta_star_array, img14bl,"Filtered blurred image.tif")
