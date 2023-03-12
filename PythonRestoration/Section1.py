@@ -62,19 +62,20 @@ def calculate_Z(img, Y):
 
 def calculate_Rzz(Z):
     N = Z.shape[0]
+    print(N)
     Rzz = np.matmul(np.transpose(Z),Z)
-    Rzz = 1/N * Rzz
+    Rzz /= N
     return Rzz
 
 def calculate_Rhat_zy(Y, Z):
     N = Z.shape[0]
+    print(N)
     Rhat_zy = np.matmul(np.transpose(Z),Y)
-    Rhat_zy = 1/N * Rhat_zy
+    Rhat_zy /= N
     return Rhat_zy
 
-def calculate_theta_star(Rzz, Rhat_zy, N):
+def calculate_theta_star(Rzz, Rhat_zy):
     theta_star = np.matmul(np.linalg.inv(Rzz),Rhat_zy)
-    theta_star = 1/N * theta_star
     return theta_star
 
 def calculate_theta_star_array(theta_star):
@@ -103,7 +104,7 @@ def apply_optimal_filter(theta_star_array, im, filename):
     Y = np.zeros((X.shape))
     for row_idx in range(X.shape[0]):
         for col_idx in range(X.shape[1]):
-            Y[row_idx, col_idx] = 255 * filter_pixel(X, theta_star_array, row_idx, col_idx)
+            Y[row_idx, col_idx] = filter_pixel(X, theta_star_array, row_idx, col_idx)
     im_filtered = Image.fromarray(Y)
     im_filtered.save(filename)    
     im_filtered.show()
@@ -111,8 +112,8 @@ def apply_optimal_filter(theta_star_array, im, filename):
 Y = calculate_Y(img14g)
 Z = calculate_Z(img14bl,Y)
 Rzz = calculate_Rzz(Z)
-Rhat_zy = calculate_Rhat_zy(Z,Y)
-theta_star = calculate_theta_star(Rzz, Rhat_zy,Y.shape[0])
+Rhat_zy = calculate_Rhat_zy(Y, Z)
+theta_star = calculate_theta_star(Rzz, Rhat_zy)
 theta_star_array = calculate_theta_star_array(theta_star)
 print(theta_star_array)
 apply_optimal_filter(theta_star_array, img14bl,"Filtered blurred image.tif")
