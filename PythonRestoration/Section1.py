@@ -25,7 +25,7 @@ def calculate_Y(img):
     y_data = np.array(img)
     for row_idx in range(y_data.shape[0]):
         for col_idx in range(y_data.shape[1]):
-            if ((row_idx % 20 == 0) and (col_idx % 20 == 0)):
+            if ((row_idx % 20 == 0) and (col_idx % 20 == 0) and (row_idx > 0) and (col_idx > 0)):
                 y_list.append(y_data[row_idx,col_idx]) 
     Y = np.asarray(y_list)
     return Y
@@ -53,7 +53,7 @@ def calculate_Z(img, Y):
     z_data = np.array(img)
     for row_idx in range(z_data.shape[0]):
         for col_idx in range(z_data.shape[1]):
-            if ((row_idx % 20 == 0) and (col_idx % 20 == 0)):
+            if ((row_idx % 20 == 0) and (col_idx % 20 == 0) and (row_idx > 0) and (col_idx > 0)):
                 z_row = get_window_pixels(z_data, row_idx, col_idx)
                 for z_col_idx in range(49):
                     Z[z_row_idx,z_col_idx] = z_row[z_col_idx]
@@ -105,6 +105,9 @@ def apply_optimal_filter(theta_star_array, im, filename):
     for row_idx in range(X.shape[0]):
         for col_idx in range(X.shape[1]):
             Y[row_idx, col_idx] = filter_pixel(X, theta_star_array, row_idx, col_idx)
+
+    #Y = np.clip(Y,0,1)
+    #Y= np.uint8(Y*255)
     im_filtered = Image.fromarray(Y)
     im_filtered.save(filename)    
     im_filtered.show()
