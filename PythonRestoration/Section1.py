@@ -62,14 +62,14 @@ def calculate_Z(img, Y):
 
 def calculate_Rzz(Z):
     N = Z.shape[0]
-    print(N)
+    #print(N)
     Rzz = np.matmul(np.transpose(Z),Z)
     Rzz /= N
     return Rzz
 
 def calculate_Rhat_zy(Y, Z):
     N = Z.shape[0]
-    print(N)
+    #print(N)
     Rhat_zy = np.matmul(np.transpose(Z),Y)
     Rhat_zy /= N
     return Rhat_zy
