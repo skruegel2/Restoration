@@ -37,7 +37,7 @@ double MultiplyOneFilterEl(int source_height, int source_width,
                          int filt_cur_col, double** source_img, double** filt, double lambda);
 
 // Init filter
-void InitFilter(struct filter_struct* filt)
+void init_filter(struct filter_struct* filt)
 {
   int idx;
   // Row 0
@@ -95,28 +95,20 @@ void test_sort(struct filter_struct* filt)
     test[idx].weight = filt[idx].weight;
     test[idx].product = filt[idx].product;
   }
-  // print product before sort
-  for (idx = 0; idx < FILTER_STRUCT_LEN; idx++)
-  {
-    printf("Index %d\tProduct %f\n", idx, filt[idx].product);
-  }
+  // print pixel before sort
+  //for (idx = 0; idx < FILTER_STRUCT_LEN; idx++)
+  //{
+  //  printf("Index %d\tPixel %f\n", idx, filt[idx].pixel);
+  //}
 
   // Sort product
   product_sort(filt, FILTER_STRUCT_LEN);
 
-  // Copy dest back into filt
+  // print pixel after sort
   //for (idx = 0; idx < FILTER_STRUCT_LEN; idx++)
   //{
-  //  filt[idx].product = dest[idx].product;
-  //  filt[idx].pixel = dest[idx].pixel;
-  //  filt[idx].weight = dest[idx].weight;
+  //  printf("Index %d\tPixel %f\n", idx, filt[idx].pixel);
   //}
-
-  // print product before sort
-  for (idx = 0; idx < FILTER_STRUCT_LEN; idx++)
-  {
-    printf("Index %d\tProduct %f\n", idx, filt[idx].product);
-  }
 
 }
 
@@ -156,16 +148,35 @@ void product_sort(struct filter_struct* src, int len)
   }
 }
 
-// Filter element comparison
-int filter_el_compare(const void * elem1, const void * elem2)
+int find_median_idx(struct filter_struct* src, int len)
 {
-  struct filter_struct* fs1 = (struct filter_struct*)elem1;
-  struct filter_struct* fs2 = (struct filter_struct*)elem2;
-  double f = fs1->product;
-  double s = fs2->product;
-  if (f > s) return 1;
-  if (f < s) return -1;
-  return 0;
+  int src_idx = 0;    // Index to step through source 
+  int sum_idx = 0;
+  int median_idx = 0;
+  float large_weight_sum = 0;
+  float small_weight_sum = 0;
+  for (src_idx = 0; src_idx < len; src_idx++)
+  {
+    large_weight_sum = 0;     // Reset sums before each summation
+    small_weight_sum = 0;
+    for (sum_idx = 0; sum_idx <= src_idx; sum_idx++)
+    {
+      large_weight_sum += src[sum_idx].weight;
+    }
+    for (sum_idx = src_idx+1; sum_idx < len; sum_idx++)
+    {
+      small_weight_sum += src[sum_idx].weight;
+    }
+    printf("Large: %f small: %f\n", large_weight_sum, small_weight_sum);
+    // Compare to see if median has been reached
+    if (large_weight_sum >= small_weight_sum)
+    {
+      median_idx = src_idx;
+
+      break;
+    }
+  }
+  return median_idx;
 }
 
 int main (int argc, char **argv)
@@ -175,8 +186,11 @@ int main (int argc, char **argv)
   struct TIFF_img input_img;
   struct TIFF_img filter_img;
   struct filter_struct med_filt[25];
-  InitFilter(med_filt);
+  init_filter(med_filt);
+  int median_idx;
+  median_idx = find_median_idx(med_filt, 25);
   test_sort(med_filt);
+
   /* open image file */
   if ((fp_input = fopen("img14g.tif", "rb")) == NULL) {
     fprintf ( stderr, "cannot open file %s\n", "img14g.tif" );
