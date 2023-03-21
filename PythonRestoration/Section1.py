@@ -105,12 +105,15 @@ def apply_optimal_filter(theta_star_array, im, filename):
     for row_idx in range(X.shape[0]):
         for col_idx in range(X.shape[1]):
             Y[row_idx, col_idx] = filter_pixel(X, theta_star_array, row_idx, col_idx)
-
+            if (Y[row_idx, col_idx] < 0):
+                Y[row_idx, col_idx] = 0
+            if (Y[row_idx, col_idx] > 255):
+                Y[row_idx, col_idx] = 255;
     #Y = np.clip(Y,0,1)
     #Y= np.uint8(Y*255)
-    im_filtered = Image.fromarray(Y)
+    im_filtered = Image.fromarray(Y.astype(np.uint8))
     im_filtered.save(filename)    
-    im_filtered.show()
+    #im_filtered.show()
 
 Y = calculate_Y(img14g)
 Z = calculate_Z(img14bl,Y)
