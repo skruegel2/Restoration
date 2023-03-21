@@ -9,11 +9,8 @@
 #define HALF_FILT 2
 #define FILTER_STRUCT_LEN 25
 
-// Filter element comparison
-int filter_el_compare(const void* elem1, const void* elem2);
-
-// Sort filter array in descending product order
-void product_sort(struct filter_struct* filt, int len);
+// Sort filter array in descending pixel order
+void pixel_sort(struct filter_struct* filt, int len);
 
 struct filter_struct
 {
@@ -24,17 +21,17 @@ struct filter_struct
 
 void error(char *name);
 
-void filter_image(struct TIFF_img input_img, struct TIFF_img color_img, double** filt);
+void filter_image(struct TIFF_img input_img, struct TIFF_img color_img, struct filter_struct* med_filt);
 
 // Multiply one pixel element by filter
 double multiply_one_pixel(int source_height, int source_width,
                          int src_cur_row, int src_cur_col,
-                         double** source_img, double** filt);
+                         double** source_img, struct filter_struct* med_filt);
 
 // Multiply pixel by one filter element, considering boundaries.
-double multiply_one_filter_element(int source_height, int source_width,
+double calculate_one_filter_element(int source_height, int source_width,
                          int src_cur_row, int src_cur_col, int filt_cur_row,
-                         int filt_cur_col, double** source_img, double** filt);
+                         int filt_cur_col, double** source_img);
 
 // Init filter
 void init_filter(struct filter_struct* filt)
@@ -102,7 +99,7 @@ void test_sort(struct filter_struct* filt)
   //}
 
   // Sort product
-  product_sort(filt, FILTER_STRUCT_LEN);
+  pixel_sort(filt, FILTER_STRUCT_LEN);
 
   // print pixel after sort
   //for (idx = 0; idx < FILTER_STRUCT_LEN; idx++)
@@ -130,7 +127,7 @@ void swap(struct filter_struct* src, int el_1_idx, int el_2_idx)
 }
 
 // Sort filter array in descending product order
-void product_sort(struct filter_struct* src, int len)
+void pixel_sort(struct filter_struct* src, int len)
 {
   int idx;
   int sorted_idx;
@@ -140,7 +137,7 @@ void product_sort(struct filter_struct* src, int len)
     // Inner loop steps through unsorted elements
     for (idx = sorted_idx + 1; idx < len; idx++)
     {
-      if (src[idx].product > src[sorted_idx].product)
+      if (src[idx].pixel > src[sorted_idx].pixel)
       {
         swap(src, sorted_idx, idx);
       }
@@ -167,7 +164,7 @@ int find_median_idx(struct filter_struct* src, int len)
     {
       small_weight_sum += src[sum_idx].weight;
     }
-    printf("Large: %f small: %f\n", large_weight_sum, small_weight_sum);
+    //printf("Large: %f small: %f\n", large_weight_sum, small_weight_sum);
     // Compare to see if median has been reached
     if (large_weight_sum >= small_weight_sum)
     {
@@ -208,9 +205,9 @@ int main (int argc, char **argv)
   get_TIFF ( &filter_img, input_img.height,
             input_img.width, 'g' );
 
-  filter_image(input_img, filter_img, filt);
+  filter_image(input_img, filter_img, med_filt);
 
-  if ( ( fp_filter = fopen ( "HW7Prob2.tif", "wb" ) ) == NULL ) {
+  if ( ( fp_filter = fopen ( "Filtered img14gn.tif", "wb" ) ) == NULL ) {
     fprintf ( stderr, "cannot open file HW7Prob2.tif\n");
     exit ( 1 );
   }
@@ -230,10 +227,10 @@ int main (int argc, char **argv)
   return(0);
 }
 
-// Multiply pixel by one filter element, considering boundaries.
-double multiply_one_filter_element(int source_height, int source_width,
+// Add an element to filter, considering boundaries.
+double calculate_one_filter_element(int source_height, int source_width,
                          int src_cur_row, int src_cur_col, int filt_cur_row,
-                         int filt_cur_col, double** source_img, double** filt)
+                         int filt_cur_col, double** source_img)
 {
   double ret_val;
   // Check for out of bounds to the left
@@ -258,40 +255,44 @@ double multiply_one_filter_element(int source_height, int source_width,
   }
   else
   {
-    ret_val = source_img[src_cur_row + filt_cur_row][src_cur_col + filt_cur_col]*filt[filt_cur_row+HALF_FILT][filt_cur_col+HALF_FILT];
+    ret_val = source_img[src_cur_row + filt_cur_row][src_cur_col + filt_cur_col];
   }
   return ret_val;
 }
 
-// Multiply one pixel element by filter
-double multiply_one_pixel(int source_height, int source_width,
+// Fill filter, sort filter, return median
+double calculate_one_pixel(int source_height, int source_width,
                          int src_cur_row, int src_cur_col,
-                         double** source_img, double** filt)
+                         double** source_img, struct filter_struct* med_filt)
 {
-  double ret_val = 0;   // Init before accumulating
+  double ret_val;
+
+  // Fill filter
   for(int filt_row = -HALF_FILT; filt_row <= HALF_FILT; filt_row++)
   {
     for (int filt_col = -HALF_FILT; filt_col <= HALF_FILT; filt_col++)
     {
-      ret_val += multiply_one_filter_element(source_height,source_width,src_cur_row, src_cur_col,
-                                    filt_row, filt_col, source_img, filt);
+      med_filt[(filt_row + HALF_FILT)*5 + filt_col+HALF_FILT].pixel =
+        calculate_one_filter_element(source_height,source_width,src_cur_row, src_cur_col,
+                                    filt_row, filt_col, source_img);
     }
   }
-
+  pixel_sort(med_filt, FILTER_LENGTH * FILTER_LENGTH);
+  ret_val = med_filt[find_median_idx(med_filt, FILTER_LENGTH * FILTER_LENGTH)].pixel;
   return ret_val;
 }
 
-void filter_image(struct TIFF_img input_img, struct TIFF_img filter_img, double** filt)
+void filter_image(struct TIFF_img input_img, struct TIFF_img filter_img, struct filter_struct* med_filt)
 {
-  double **img_orig;
-  double **img_filt;
+  double **source_img;
+  double **filt_img;
   int cur_row, cur_col;
   int32_t pixel;
 
-  img_orig = (double **)get_img(input_img.width,
+  source_img = (double **)get_img(input_img.width,
                                      input_img.height,
                                      sizeof(double));
-  img_filt = (double **)get_img(input_img.width,
+  filt_img = (double **)get_img(input_img.width,
                                      input_img.height,
                                      sizeof(double));
   // Copy all components to respective double array
@@ -299,7 +300,7 @@ void filter_image(struct TIFF_img input_img, struct TIFF_img filter_img, double*
   {
     for ( cur_col = 0; cur_col < input_img.width; cur_col++ )
     {
-        img_orig[cur_row][cur_col] = input_img.mono[cur_row][cur_col];
+        source_img[cur_row][cur_col] = input_img.mono[cur_row][cur_col];
     }
   }
 
@@ -308,17 +309,17 @@ void filter_image(struct TIFF_img input_img, struct TIFF_img filter_img, double*
   {
     for ( cur_col = 0; cur_col < input_img.width; cur_col++ )
     {
-      img_filt[cur_row][cur_col] = multiply_one_pixel(input_img.height,input_img.width,
+      filt_img[cur_row][cur_col] = calculate_one_pixel(input_img.height,input_img.width,
                                                       cur_row,cur_col,
-                                                      img_orig, img_filt);
+                                                      source_img, med_filt);
     }
   }
-
+  // Threshold
   for ( cur_row = 0; cur_row < input_img.height; cur_row++ )
   {
       for ( cur_col = 0; cur_col < input_img.width; cur_col++ )
       {
-          pixel = (int32_t) img_filt[cur_row][cur_col];
+          pixel = (int32_t) filt_img[cur_row][cur_col];
           if (pixel > 255)
           {
               filter_img.mono[cur_row][cur_col] = 255;
@@ -334,6 +335,6 @@ void filter_image(struct TIFF_img input_img, struct TIFF_img filter_img, double*
       }
   }
 
-  free_img( (void**)img_orig );
-  free_img( (void**)img_filt );
+  free_img( (void**)source_img );
+  free_img( (void**)filt_img );
 }
