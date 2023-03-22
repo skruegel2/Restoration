@@ -189,7 +189,7 @@ int main (int argc, char **argv)
   //test_sort(med_filt);
 
   /* open image file */
-  if ((fp_input = fopen("img14gn.tif", "rb")) == NULL) {
+  if ((fp_input = fopen("img14sp.tif", "rb")) == NULL) {
     fprintf ( stderr, "cannot open file %s\n", "img14g.tif" );
     exit ( 1 );
   }
@@ -207,7 +207,7 @@ int main (int argc, char **argv)
 
   filter_image(input_img, filter_img, med_filt);
 
-  if ( ( fp_filter = fopen ( "Filtered img14gn.tif", "wb" ) ) == NULL ) {
+  if ( ( fp_filter = fopen ( "Filtered img14sp.tif", "wb" ) ) == NULL ) {
     fprintf ( stderr, "cannot open file HW7Prob2.tif\n");
     exit ( 1 );
   }
